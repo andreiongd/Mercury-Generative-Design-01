@@ -6,7 +6,7 @@ import { createSeededPresets } from "./sketch/seedData";
 
 const CANVAS_WIDTH = 1080;
 const CANVAS_HEIGHT = 1080;
-const VASE_IMAGES = ["/vases/vase01.png", "/vases/vase03.png","/vases/vase04.png","/vases/vase05.png"];
+const VASE_IMAGES = ["/vases/vase06.png","/vases/vase04.png","/vases/vase05.png"];
 
 function App() {
   const containerRef = useRef<HTMLDivElement | null>(null);

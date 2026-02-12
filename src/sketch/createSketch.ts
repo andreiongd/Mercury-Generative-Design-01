@@ -61,7 +61,7 @@ export function createSketch(opts: SketchOptions = {}) {
   const MAX_PIXELS = Math.max(0, Math.floor(vars.maxPixels ?? 50000));
   const RNG_SEED = Math.floor(vars.rngSeed ?? 1337);
   const VASE_SCALE = 0.5;
-  const FLOWER_SIZE_SCALE = 3.0;
+  const FLOWER_SIZE_SCALE = 5.0;
 
   return (p: p5) => {
     let raw: p5.Image | null = null;
@@ -78,7 +78,6 @@ export function createSketch(opts: SketchOptions = {}) {
     let flowerSprites: FlowerSprite[] = [];
 
     const palette: RGB[] = [
-      [0, 0, 0],
       [0, 0, 0],
       [66, 133, 244],
       [234, 67, 53],
@@ -146,7 +145,7 @@ export function createSketch(opts: SketchOptions = {}) {
 
       const rand = mulberry32((RNG_SEED ^ 0x9e3779b9) >>> 0);
       const count = 12 + Math.floor(rand() * 50);
-      const radius = Math.max(6, Math.min(fittedW, fittedH) * 0.25);
+      const radius = Math.max(6, Math.min(fittedW, fittedH) * 0.2);
       const spriteCount = Math.max(1, flowerSprites.length);
       const placed: FlowerPlacement[] = [];
 
@@ -156,9 +155,9 @@ export function createSketch(opts: SketchOptions = {}) {
         const spriteVisibleScale = sprite?.visibleScale ?? 0.55;
         const spriteRadiusScale = sprite?.radiusScale ?? 0.5;
 
-        const size = 10 + rand() * 16;
+        const size = 10 + rand() * 15;
         const sizeAdjusted = size * (0.7 + spriteVisibleScale * 0.9) * FLOWER_SIZE_SCALE;
-        const collisionRadius = Math.max(3, sizeAdjusted * spriteRadiusScale * .2);
+        const collisionRadius = Math.max(1, sizeAdjusted * spriteRadiusScale * .2);
         const rotation = (rand() - 0.5) * 0.7;
         const localRadius = radius + sizeAdjusted * 0.9;
 
@@ -508,11 +507,11 @@ export function createSketch(opts: SketchOptions = {}) {
 
     p.draw = () => {
       if (!isReady || !img) {
-        p.background(0);
+        p.background(20);
         return;
       }
 
-      pg.background(0);
+      pg.background(20);
       pg.noStroke();
 
       pg.push();
@@ -534,6 +533,8 @@ export function createSketch(opts: SketchOptions = {}) {
         const r = img.pixels[pOffset];
         const g = img.pixels[pOffset + 1];
         const b = img.pixels[pOffset + 2];
+
+      
 
         pg.fill(r, g, b);
 
