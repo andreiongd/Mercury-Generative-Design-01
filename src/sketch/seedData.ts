@@ -28,12 +28,12 @@ export function createSeededPresets(
   return Array.from({ length: count }, (_, index) => ({
     name: `Seed ${seed} / ${index + 1}`,
     variables: (() => {
-      const pixelScale = 2;
+      const pixelScale = Math.floor(randomRange(rand, 3, 3));
       return {
         pixelScale,
-        maxPixels: Math.floor(randomRange(rand, 5000, 15000)),
-        brightnessOffset: Math.floor(randomRange(rand, -24, 0)),
-        contrastFactor: Math.floor(randomRange(rand, 0, 40)),
+        maxPixels: Math.floor(randomRange(rand, 5000, 50000)),
+        brightnessOffset: Math.floor(randomRange(rand, -70, -50)),
+        contrastFactor: Math.floor(randomRange(rand, 0, 20)),
         drawAsRects: rand() > 0,
         shuffleEveryNFrames: Math.floor(randomRange(rand, 0, 60)),
         rngSeed: Math.floor(randomRange(rand, 1, 99999)),

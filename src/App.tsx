@@ -4,9 +4,9 @@ import "./App.css";
 import { createSketch, type SketchOptions } from "./sketch/createSketch";
 import { createSeededPresets } from "./sketch/seedData";
 
-const CANVAS_WIDTH = 600;
-const CANVAS_HEIGHT = 600;
-const VASE_IMAGES = ["/vases/vase01.png", "/vases/vase02.png", "/vases/vase03.png"];
+const CANVAS_WIDTH = 1080;
+const CANVAS_HEIGHT = 1080;
+const VASE_IMAGES = ["/vases/vase01.png", "/vases/vase03.png","/vases/vase04.png","/vases/vase05.png"];
 
 function App() {
   const containerRef = useRef<HTMLDivElement | null>(null);

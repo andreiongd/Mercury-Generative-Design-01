@@ -60,7 +60,7 @@ export function createSketch(opts: SketchOptions = {}) {
   const DRAW_AS_RECTS = vars.drawAsRects ?? true;
   const MAX_PIXELS = Math.max(0, Math.floor(vars.maxPixels ?? 50000));
   const RNG_SEED = Math.floor(vars.rngSeed ?? 1337);
-  const VASE_SCALE = 0.7;
+  const VASE_SCALE = 0.5;
   const FLOWER_SIZE_SCALE = 3.0;
 
   return (p: p5) => {
@@ -145,8 +145,8 @@ export function createSketch(opts: SketchOptions = {}) {
       const centerY = fittedOffsetY + anchorY * fittedH;
 
       const rand = mulberry32((RNG_SEED ^ 0x9e3779b9) >>> 0);
-      const count = 5 + Math.floor(rand() * 21);
-      const radius = Math.max(6, Math.min(fittedW, fittedH) * 0.11);
+      const count = 12 + Math.floor(rand() * 50);
+      const radius = Math.max(6, Math.min(fittedW, fittedH) * 0.25);
       const spriteCount = Math.max(1, flowerSprites.length);
       const placed: FlowerPlacement[] = [];
 
@@ -158,7 +158,7 @@ export function createSketch(opts: SketchOptions = {}) {
 
         const size = 10 + rand() * 16;
         const sizeAdjusted = size * (0.7 + spriteVisibleScale * 0.9) * FLOWER_SIZE_SCALE;
-        const collisionRadius = Math.max(3, sizeAdjusted * spriteRadiusScale * 0.9);
+        const collisionRadius = Math.max(3, sizeAdjusted * spriteRadiusScale * .2);
         const rotation = (rand() - 0.5) * 0.7;
         const localRadius = radius + sizeAdjusted * 0.9;
 
@@ -306,71 +306,6 @@ export function createSketch(opts: SketchOptions = {}) {
       target.updatePixels();
     };
 
-    const applyDitherWithAlpha = (target: p5.Image) => {
-      target.loadPixels();
-
-      const w = target.width;
-      const h = target.height;
-      const n = w * h;
-
-      const r = new Float32Array(n);
-      const g = new Float32Array(n);
-      const b = new Float32Array(n);
-      const a = new Float32Array(n);
-      const active = new Uint8Array(n);
-
-      for (let i = 0, px = 0; i < n; i += 1, px += 4) {
-        r[i] = target.pixels[px];
-        g[i] = target.pixels[px + 1];
-        b[i] = target.pixels[px + 2];
-        a[i] = target.pixels[px + 3];
-        active[i] = a[i] > 0 ? 1 : 0;
-      }
-
-      const distribute = (x: number, y: number, errR: number, errG: number, errB: number, factor: number) => {
-        if (x < 0 || x >= w || y < 0 || y >= h) return;
-        const idx = x + y * w;
-        if (!active[idx]) return;
-        r[idx] = clamp255(r[idx] + errR * factor);
-        g[idx] = clamp255(g[idx] + errG * factor);
-        b[idx] = clamp255(b[idx] + errB * factor);
-      };
-
-      for (let y = 0; y < h; y += 1) {
-        for (let x = 0; x < w; x += 1) {
-          const idx = x + y * w;
-          if (!active[idx]) continue;
-
-          const oldR = r[idx];
-          const oldG = g[idx];
-          const oldB = b[idx];
-
-          const pick = nearestPalette(oldR, oldG, oldB);
-          r[idx] = pick[0];
-          g[idx] = pick[1];
-          b[idx] = pick[2];
-
-          const errR = oldR - pick[0];
-          const errG = oldG - pick[1];
-          const errB = oldB - pick[2];
-
-          distribute(x + 1, y, errR, errG, errB, 7 / 16);
-          distribute(x - 1, y + 1, errR, errG, errB, 3 / 16);
-          distribute(x, y + 1, errR, errG, errB, 5 / 16);
-          distribute(x + 1, y + 1, errR, errG, errB, 1 / 16);
-        }
-      }
-
-      for (let i = 0, px = 0; i < n; i += 1, px += 4) {
-        target.pixels[px] = r[i];
-        target.pixels[px + 1] = g[i];
-        target.pixels[px + 2] = b[i];
-        target.pixels[px + 3] = a[i];
-      }
-
-      target.updatePixels();
-    };
-
     const prepareFlowerSprite = (src: p5.Image, targetSize: number): FlowerSprite => {
       const aspect = src.width / src.height;
       let newW = targetSize;
@@ -397,10 +332,6 @@ export function createSketch(opts: SketchOptions = {}) {
       const dx = Math.floor((targetSize - newW) / 2);
       const dy = Math.floor((targetSize - newH) / 2);
       out.copy(scaled, 0, 0, newW, newH, dx, dy, newW, newH);
-
-      adjustBrightness(out, BRIGHTNESS_OFFSET);
-      adjustContrast(out, CONTRAST_FACTOR);
-      applyDitherWithAlpha(out);
       out.loadPixels();
 
       let minX = targetSize;
@@ -448,6 +379,7 @@ export function createSketch(opts: SketchOptions = {}) {
         "/flowers/flower04.png",
         "/flowers/flower05.png",
         "/flowers/flower06.png",
+        "/flowers/flower07.png",
       ];
 
       const loaded = new Array<FlowerSprite | null>(paths.length).fill(null);
