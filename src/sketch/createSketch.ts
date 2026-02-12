@@ -60,6 +60,7 @@ export function createSketch(opts: SketchOptions = {}) {
   const DRAW_AS_RECTS = vars.drawAsRects ?? true;
   const MAX_PIXELS = Math.max(0, Math.floor(vars.maxPixels ?? 50000));
   const RNG_SEED = Math.floor(vars.rngSeed ?? 1337);
+  const VASE_SCALE = 0.8;
 
   return (p: p5) => {
     let raw: p5.Image | null = null;
@@ -212,11 +213,11 @@ export function createSketch(opts: SketchOptions = {}) {
       let newH = 0;
 
       if (imgAspect > canvasAspect) {
-        newW = finalW;
-        newH = Math.floor(finalW / imgAspect);
+        newW = Math.floor(finalW * VASE_SCALE);
+        newH = Math.floor(newW / imgAspect);
       } else {
-        newH = finalH;
-        newW = Math.floor(finalH * imgAspect);
+        newH = Math.floor(finalH * VASE_SCALE);
+        newW = Math.floor(newH * imgAspect);
       }
 
       const scaled = src.get();
