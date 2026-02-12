@@ -31,7 +31,7 @@ export function createSeededPresets(
       const pixelScale = 2;
       return {
         pixelScale,
-        maxPixels: Math.floor(randomRange(rand, 2000, 10000)),
+        maxPixels: Math.floor(randomRange(rand, 5000, 15000)),
         brightnessOffset: Math.floor(randomRange(rand, -24, 0)),
         contrastFactor: Math.floor(randomRange(rand, 0, 40)),
         drawAsRects: rand() > 0,

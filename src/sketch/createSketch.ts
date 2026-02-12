@@ -60,7 +60,8 @@ export function createSketch(opts: SketchOptions = {}) {
   const DRAW_AS_RECTS = vars.drawAsRects ?? true;
   const MAX_PIXELS = Math.max(0, Math.floor(vars.maxPixels ?? 50000));
   const RNG_SEED = Math.floor(vars.rngSeed ?? 1337);
-  const VASE_SCALE = 0.8;
+  const VASE_SCALE = 0.7;
+  const FLOWER_SIZE_SCALE = 3.0;
 
   return (p: p5) => {
     let raw: p5.Image | null = null;
@@ -156,7 +157,7 @@ export function createSketch(opts: SketchOptions = {}) {
         const spriteRadiusScale = sprite?.radiusScale ?? 0.5;
 
         const size = 10 + rand() * 16;
-        const sizeAdjusted = size * (0.7 + spriteVisibleScale * 0.9);
+        const sizeAdjusted = size * (0.7 + spriteVisibleScale * 0.9) * FLOWER_SIZE_SCALE;
         const collisionRadius = Math.max(3, sizeAdjusted * spriteRadiusScale * 0.9);
         const rotation = (rand() - 0.5) * 0.7;
         const localRadius = radius + sizeAdjusted * 0.9;
@@ -205,42 +206,21 @@ export function createSketch(opts: SketchOptions = {}) {
       flowerPlacements = placed;
     };
 
-    const prepareImageWithAspect = (src: p5.Image) => {
-      const imgAspect = src.width / src.height;
-      const canvasAspect = finalW / finalH;
+    const fitImageToSize = (src: p5.Image, outW: number, outH: number) => {
+      const scale = Math.min(outW / src.width, outH / src.height) * VASE_SCALE;
+      const newW = src.width * scale;
+      const newH = src.height * scale;
+      const dx = (outW - newW) * 0.5;
+      const dy = (outH - newH) * 0.5;
 
-      let newW = 0;
-      let newH = 0;
+      const g = p.createGraphics(outW, outH);
+      g.pixelDensity(1);
+      g.clear();
+      g.noSmooth();
+      g.imageMode(p.CORNER);
+      g.image(src, dx, dy, newW, newH);
 
-      if (imgAspect > canvasAspect) {
-        newW = Math.floor(finalW * VASE_SCALE);
-        newH = Math.floor(newW / imgAspect);
-      } else {
-        newH = Math.floor(finalH * VASE_SCALE);
-        newW = Math.floor(newH * imgAspect);
-      }
-
-      const scaled = src.get();
-      scaled.resize(newW, newH);
-
-      const out = p.createImage(finalW, finalH);
-      out.loadPixels();
-      for (let i = 0; i < out.pixels.length; i += 4) {
-        out.pixels[i] = darkestColor[0];
-        out.pixels[i + 1] = darkestColor[1];
-        out.pixels[i + 2] = darkestColor[2];
-        out.pixels[i + 3] = 255;
-      }
-      out.updatePixels();
-
-      const dx = Math.floor((finalW - newW) / 2);
-      const dy = Math.floor((finalH - newH) / 2);
-      fittedOffsetX = dx;
-      fittedOffsetY = dy;
-      fittedW = newW;
-      fittedH = newH;
-      out.copy(scaled, 0, 0, newW, newH, dx, dy, newW, newH);
-      return out;
+      return { image: g.get(), dx, dy, w: newW, h: newH };
     };
 
     const adjustBrightness = (target: p5.Image, offset: number) => {
@@ -478,6 +458,7 @@ export function createSketch(opts: SketchOptions = {}) {
         if (remaining > 0) return;
         flowerSprites = loaded.filter((item): item is FlowerSprite => item !== null);
         buildFlowerPlacements();
+        if (raw) rebuildImageAndCache();
       };
 
       for (let i = 0; i < paths.length; i += 1) {
@@ -499,12 +480,44 @@ export function createSketch(opts: SketchOptions = {}) {
 
       finalW = Math.max(1, Math.floor(p.width / pixelScale));
       finalH = Math.max(1, Math.floor(p.height / pixelScale));
+      const renderW = finalW * pixelScale;
+      const renderH = finalH * pixelScale;
 
-      img = prepareImageWithAspect(raw);
+      const fitHigh = fitImageToSize(raw, renderW, renderH);
+      fittedOffsetX = fitHigh.dx;
+      fittedOffsetY = fitHigh.dy;
+      fittedW = fitHigh.w;
+      fittedH = fitHigh.h;
+      buildFlowerPlacements();
+
+      const composite = p.createGraphics(renderW, renderH);
+      composite.pixelDensity(1);
+      composite.clear();
+      composite.noSmooth();
+      composite.imageMode(p.CORNER);
+      composite.image(fitHigh.image, 0, 0);
+
+      for (let i = 0; i < flowerPlacements.length; i += 1) {
+        const flower = flowerPlacements[i];
+        if (flowerSprites.length === 0) continue;
+        const sprite = flowerSprites[flower.spriteIndex % flowerSprites.length];
+        const x = flower.x;
+        const y = flower.y;
+        const size = flower.size;
+
+        composite.push();
+        composite.imageMode(p.CENTER);
+        composite.translate(x, y);
+        composite.rotate(flower.angle);
+        composite.image(sprite.image, 0, 0, size, size);
+        composite.pop();
+      }
+
+      img = composite.get();
+      img.resize(finalW, finalH);
       adjustBrightness(img, BRIGHTNESS_OFFSET);
       adjustContrast(img, CONTRAST_FACTOR);
       applyDither(img);
-      buildFlowerPlacements();
 
       img.loadPixels();
 
@@ -526,11 +539,13 @@ export function createSketch(opts: SketchOptions = {}) {
 
     p.setup = () => {
       p.createCanvas(width, height);
+      p.pixelDensity(1);
       p.frameRate(30);
       p.noSmooth();
       p.colorMode(p.RGB, 255);
 
       pg = p.createGraphics(width, height);
+      pg.pixelDensity(1);
       loadFlowerSprites();
 
       p.loadImage(
@@ -599,26 +614,6 @@ export function createSketch(opts: SketchOptions = {}) {
 
       pg.pop();
       p.image(pg, 0, 0);
-
-      const drawOffsetX = (p.width - finalW * pixelScale) * 0.5;
-      const drawOffsetY = (p.height - finalH * pixelScale) * 0.5;
-
-      for (let i = 0; i < flowerPlacements.length; i += 1) {
-        const flower = flowerPlacements[i];
-        if (flowerSprites.length === 0) continue;
-
-        const sprite = flowerSprites[flower.spriteIndex % flowerSprites.length];
-        const x = drawOffsetX + flower.x * pixelScale;
-        const y = drawOffsetY + flower.y * pixelScale;
-        const size = flower.size * pixelScale;
-
-        p.push();
-        p.imageMode(p.CENTER);
-        p.translate(x, y);
-        p.rotate(flower.angle);
-        p.image(sprite.image, 0, 0, size, size);
-        p.pop();
-      }
     };
   };
 }
