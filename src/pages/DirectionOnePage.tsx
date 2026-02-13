@@ -1,5 +1,6 @@
 import { SeededSketchPage } from "../components/SeededSketchPage";
 import directionOneSeedData from "../sketch/directionOneSeedData.json";
+import { generateDirectionOneSeededVariables } from "../sketch/directionOneSeedGenerator";
 
 type DirectionOnePageProps = {
   onNavigate: () => void;
@@ -10,7 +11,7 @@ const MAIN_VASE_IMAGES = [
   "/sketch-images/vases/vase04.png",
   "/sketch-images/vases/vase05.png",
 ];
-const DIRECTION_ONE_PRESET_VARIABLES = directionOneSeedData.map((item) => item.variables);
+const DIRECTION_ONE_PRESET_VARIABLES = generateDirectionOneSeededVariables(directionOneSeedData);
 
 export function DirectionOnePage({ onNavigate }: DirectionOnePageProps) {
   return (

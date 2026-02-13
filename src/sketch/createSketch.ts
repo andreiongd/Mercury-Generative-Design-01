@@ -363,13 +363,13 @@ export function createSketch(opts: SketchOptions = {}) {
 
     const loadFlowerSprites = () => {
       const paths = [
-        "/sketch-images/flowers/flower01.png",
-        "/sketch-images/flowers/flower02.png",
-        "/sketch-images/flowers/flower03.png",
-        "/sketch-images/flowers/flower04.png",
-        "/sketch-images/flowers/flower05.png",
+        "/sketch-images/flowers/flower08.png",
+        "/sketch-images/flowers/flower09.png",
         "/sketch-images/flowers/flower06.png",
-        "/sketch-images/flowers/flower07.png",
+        "/sketch-images/flowers/flower09.png",
+        "/sketch-images/flowers/flower08.png",
+        "/sketch-images/flowers/flower06.png",
+        "/sketch-images/flowers/flower08.png",
       ];
 
       const loaded = new Array<FlowerSprite | null>(paths.length).fill(null);

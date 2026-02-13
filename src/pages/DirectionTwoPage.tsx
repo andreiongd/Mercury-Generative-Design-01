@@ -53,14 +53,14 @@ export function DirectionTwoPage({ onNavigate }: DirectionTwoPageProps) {
 
     return pairs.map(({ vasePath, topPath }) => {
       const vars: DirectionTwoVariables = {
-        pixelScale: 2,
+        pixelScale: Math.floor(randomRange(rand, 2,2)),
         brightnessOffset: Math.floor(randomRange(rand, -28, -10)),
         contrastFactor: Math.floor(randomRange(rand, 8, 32)),
         stillLifeOffset: Math.floor(randomRange(rand, 70, 130)),
         stackYOffset: Math.floor(randomRange(rand, 50, 95)),
         drawAsRects: true,
-        maxPixels: 1000000,
-        shuffleEveryNFrames: rand() > 0.5 ? 0 : 30,
+        maxPixels: Math.floor(randomRange(rand, 1000, 20000)),
+        shuffleEveryNFrames: 0,
         rngSeed: Math.floor(randomRange(rand, 1, 99999)),
         vaseScale: randomRange(rand, 0.4, 0.72),
         stilllifeScale: randomRange(rand, 0.5, 0.95),

@@ -22,6 +22,7 @@ export type DirectionTwoVariables = {
   rngSeed?: number;
   vaseScale?: number;
   stilllifeScale?: number;
+  minCoverage?: number;
 };
 
 export type DirectionTwoSketchOptions = {
@@ -54,10 +55,12 @@ export function createDirectionTwoSketch(opts: DirectionTwoSketchOptions) {
   const pixelScale = Math.max(1, Math.floor(vars.pixelScale ?? 2));
   const BRIGHTNESS_OFFSET = vars.brightnessOffset ?? -20;
   const CONTRAST_FACTOR = vars.contrastFactor ?? 20;
-  const STILLLIFE_OFFSET = Math.floor(vars.stillLifeOffset ?? 100);
-  const STACK_Y_OFFSET = Math.floor(vars.stackYOffset ?? 80);
+  // Keep offsets in canvas pixels so composition position is stable across pixelScale changes.
+  const STILLLIFE_OFFSET_PX = vars.stillLifeOffset ?? 100;
+  const STACK_Y_OFFSET_PX = vars.stackYOffset ?? 80;
   const DRAW_AS_RECTS = vars.drawAsRects ?? true;
   const MAX_PIXELS = Math.max(0, Math.floor(vars.maxPixels ?? 50000));
+  const MIN_COVERAGE = Math.max(0, Math.min(1, vars.minCoverage ?? 0.75));
   const SHUFFLE_EVERY_N_FRAMES = Math.max(0, Math.floor(vars.shuffleEveryNFrames ?? 0));
   const RNG_SEED = Math.floor(vars.rngSeed ?? 1337);
   const VASE_SCALE = vars.vaseScale ?? 0.5;
@@ -83,6 +86,8 @@ export function createDirectionTwoSketch(opts: DirectionTwoSketchOptions) {
 
     let finalW = 0;
     let finalH = 0;
+    let drawIdxBottom = new Int32Array(0);
+    let drawCountBottom = 0;
     let drawIdxTop = new Int32Array(0);
     let drawCountTop = 0;
 
@@ -288,6 +293,35 @@ export function createDirectionTwoSketch(opts: DirectionTwoSketchOptions) {
       drawCountTop = drawIdxTop.length;
     };
 
+    const buildBottomCache = () => {
+      if (!imgBottom) {
+        drawIdxBottom = new Int32Array(0);
+        drawCountBottom = 0;
+        return;
+      }
+      imgBottom.loadPixels();
+      const indices: number[] = [];
+      for (let px = 0; px < imgBottom.pixels.length; px += 4) {
+        const r = imgBottom.pixels[px];
+        const g = imgBottom.pixels[px + 1];
+        const b = imgBottom.pixels[px + 2];
+        if (!isDarkest(r, g, b)) indices.push(px / 4);
+      }
+      drawIdxBottom = Int32Array.from(indices);
+      drawCountBottom = drawIdxBottom.length;
+    };
+
+    const shuffleDrawIdxBottom = (frameCount: number) => {
+      if (drawIdxBottom.length === 0) return;
+      const rand = mulberry32((RNG_SEED ^ 0x9e3779b9 ^ frameCount * 8191) >>> 0);
+      for (let i = drawIdxBottom.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(rand() * (i + 1));
+        const tmp = drawIdxBottom[i];
+        drawIdxBottom[i] = drawIdxBottom[j];
+        drawIdxBottom[j] = tmp;
+      }
+    };
+
     const shuffleDrawIdxTop = (frameCount: number) => {
       if (drawIdxTop.length === 0) return;
       const rand = mulberry32((RNG_SEED + frameCount * 10007) >>> 0);
@@ -315,28 +349,30 @@ export function createDirectionTwoSketch(opts: DirectionTwoSketchOptions) {
       adjustContrast(imgTop, CONTRAST_FACTOR);
       applyDither(imgTop);
 
+      buildBottomCache();
       buildTopCache();
       vaseBounds = computeBBox(imgBottom);
       topBounds = computeBBox(imgTop);
 
       topOffsetX = vaseBounds.centerX - topBounds.centerX;
-      topOffsetY = vaseBounds.minY - topBounds.maxY + STILLLIFE_OFFSET;
+      topOffsetY = vaseBounds.minY - topBounds.maxY + STILLLIFE_OFFSET_PX / pixelScale;
 
+      // Shuffle once for a seeded randomized composition, then keep static unless explicitly animated.
+      shuffleDrawIdxBottom(0);
       shuffleDrawIdxTop(0);
       isReady = true;
     };
 
-    const drawBottomAll = () => {
+    const drawBottomWithCap = (toDraw: number) => {
       if (!imgBottom) return;
       imgBottom.loadPixels();
 
-      for (let px = 0; px < imgBottom.pixels.length; px += 4) {
-        const r = imgBottom.pixels[px];
-        const g = imgBottom.pixels[px + 1];
-        const b = imgBottom.pixels[px + 2];
-        if (isDarkest(r, g, b)) continue;
-
-        const i = px / 4;
+      for (let k = 0; k < toDraw; k += 1) {
+        const i = drawIdxBottom[k];
+        const pxIdx = i * 4;
+        const r = imgBottom.pixels[pxIdx];
+        const g = imgBottom.pixels[pxIdx + 1];
+        const b = imgBottom.pixels[pxIdx + 2];
         const x = i % finalW;
         const y = Math.floor(i / finalW);
         const drawX = x * pixelScale;
@@ -351,10 +387,9 @@ export function createDirectionTwoSketch(opts: DirectionTwoSketchOptions) {
       }
     };
 
-    const drawTopWithCapAndOffset = () => {
+    const drawTopWithCapAndOffset = (toDraw: number) => {
       if (!imgTop) return;
       imgTop.loadPixels();
-      const toDraw = Math.min(drawCountTop, MAX_PIXELS);
 
       for (let k = 0; k < toDraw; k += 1) {
         const i = drawIdxTop[k];
@@ -427,6 +462,7 @@ export function createDirectionTwoSketch(opts: DirectionTwoSketchOptions) {
       }
 
       if (SHUFFLE_EVERY_N_FRAMES > 0 && p.frameCount % SHUFFLE_EVERY_N_FRAMES === 0) {
+        shuffleDrawIdxBottom(p.frameCount);
         shuffleDrawIdxTop(p.frameCount);
       }
 
@@ -435,11 +471,30 @@ export function createDirectionTwoSketch(opts: DirectionTwoSketchOptions) {
       pg.push();
       pg.translate(
         (pg.width - finalW * pixelScale) * 0.5,
-        (pg.height - finalH * pixelScale) * 0.5 + STACK_Y_OFFSET * pixelScale,
+        (pg.height - finalH * pixelScale) * 0.5 + STACK_Y_OFFSET_PX,
       );
 
-      drawBottomAll();
-      drawTopWithCapAndOffset();
+      const totalDrawable = drawCountBottom + drawCountTop;
+      const minBudget = Math.floor(totalDrawable * MIN_COVERAGE);
+      const totalBudget = Math.min(totalDrawable, Math.max(MAX_PIXELS, minBudget));
+
+      let bottomBudget = 0;
+      let topBudget = 0;
+      if (totalDrawable > 0 && totalBudget > 0) {
+        const bottomShare = drawCountBottom / totalDrawable;
+        bottomBudget = Math.min(drawCountBottom, Math.floor(totalBudget * bottomShare));
+        topBudget = Math.min(drawCountTop, totalBudget - bottomBudget);
+
+        const remaining = totalBudget - (bottomBudget + topBudget);
+        if (remaining > 0) {
+          const addBottom = Math.min(remaining, drawCountBottom - bottomBudget);
+          bottomBudget += addBottom;
+          topBudget += Math.min(remaining - addBottom, drawCountTop - topBudget);
+        }
+      }
+
+      drawBottomWithCap(bottomBudget);
+      drawTopWithCapAndOffset(topBudget);
 
       pg.pop();
       p.image(pg, 0, 0);
