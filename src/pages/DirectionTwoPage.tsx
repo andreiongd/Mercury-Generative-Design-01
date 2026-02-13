@@ -47,11 +47,11 @@ export function DirectionTwoPage({ onNavigate }: DirectionTwoPageProps) {
 
   const presets = useMemo<DirectionTwoSketchOptions[]>(() => {
     const rand = mulberry32(20260210);
+    const pairs = SECONDARY_VASE_IMAGES.flatMap((vasePath) =>
+      SECONDARY_TOP_IMAGES.map((topPath) => ({ vasePath, topPath })),
+    );
 
-    return Array.from({ length: 14 }, (_, i) => {
-      const vIdx = i % SECONDARY_VASE_IMAGES.length;
-      const tIdx = (i + Math.floor(rand() * SECONDARY_TOP_IMAGES.length)) % SECONDARY_TOP_IMAGES.length;
-
+    return pairs.map(({ vasePath, topPath }) => {
       const vars: DirectionTwoVariables = {
         pixelScale: 2,
         brightnessOffset: Math.floor(randomRange(rand, -28, -10)),
@@ -59,7 +59,7 @@ export function DirectionTwoPage({ onNavigate }: DirectionTwoPageProps) {
         stillLifeOffset: Math.floor(randomRange(rand, 70, 130)),
         stackYOffset: Math.floor(randomRange(rand, 50, 95)),
         drawAsRects: true,
-        maxPixels: Math.floor(randomRange(rand, 24000, 76000)),
+        maxPixels: 1000000,
         shuffleEveryNFrames: rand() > 0.5 ? 0 : 30,
         rngSeed: Math.floor(randomRange(rand, 1, 99999)),
         vaseScale: randomRange(rand, 0.4, 0.72),
@@ -69,8 +69,8 @@ export function DirectionTwoPage({ onNavigate }: DirectionTwoPageProps) {
       return {
         width: CANVAS_WIDTH,
         height: CANVAS_HEIGHT,
-        bottomImagePath: SECONDARY_VASE_IMAGES[vIdx],
-        topImagePath: SECONDARY_TOP_IMAGES[tIdx],
+        bottomImagePath: vasePath,
+        topImagePath: topPath,
         variables: vars,
       };
     });

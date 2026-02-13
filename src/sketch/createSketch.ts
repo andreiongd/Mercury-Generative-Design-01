@@ -23,6 +23,7 @@ export type SketchVariables = {
   maxPixels?: number;
   shuffleEveryNFrames?: number;
   rngSeed?: number;
+  vaseScale?: number;
   flowerCount?: number;
   bouquetScale?: number;
   bouquetAspect?: number;
@@ -86,13 +87,13 @@ export function createSketch(opts: SketchOptions = {}) {
 
   const vars = opts.variables ?? {};
 
-  const pixelScale = Math.max(1, Math.floor(vars.pixelScale ?? 3));
+  const pixelScale = Math.max(1, Math.floor(vars.pixelScale ?? 1));
   const BRIGHTNESS_OFFSET = vars.brightnessOffset ?? -10;
   const CONTRAST_FACTOR = vars.contrastFactor ?? 10;
   const DRAW_AS_RECTS = vars.drawAsRects ?? true;
   const MAX_PIXELS = Math.max(0, Math.floor(vars.maxPixels ?? 50000));
   const RNG_SEED = Math.floor(vars.rngSeed ?? 1337);
-  const VASE_SCALE = 0.45;
+  const VASE_SCALE = Math.max(0.1, vars.vaseScale ?? 0.45);
   const fallbackFlowerCount =
     (vars.arrangementOuterCount ?? 24) + (vars.arrangementInnerCount ?? 13);
   const FLOWER_COUNT = Math.max(6, Math.floor(vars.flowerCount ?? fallbackFlowerCount));
@@ -518,11 +519,11 @@ export function createSketch(opts: SketchOptions = {}) {
 
     p.draw = () => {
       if (!isReady || !img) {
-        p.background(20);
+        p.background("#171721");
         return;
       }
 
-      pg.background(20);
+      pg.background("#171721");
       pg.noStroke();
 
       pg.push();

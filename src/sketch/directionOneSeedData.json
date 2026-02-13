@@ -2,7 +2,7 @@
   {
     "name": "Seed 20260209 / 1",
     "variables": {
-      "pixelScale": 2,
+      "pixelScale": 1,
       "maxPixels": 59010,
       "brightnessOffset": -51,
       "contrastFactor": 33,
@@ -15,13 +15,14 @@
       "bouquetInnerLift": 112,
       "bouquetDispersion": 0.674,
       "frontViewRatio": 0.22,
-      "showArrangementGuides": false
+      "showArrangementGuides": false,
+      "vaseScale": 0.4
     }
   },
   {
     "name": "Seed 20260209 / 2",
     "variables": {
-      "pixelScale": 2,
+      "pixelScale": 1,
       "maxPixels": 51029,
       "brightnessOffset": -59,
       "contrastFactor": 19,
@@ -34,13 +35,14 @@
       "bouquetInnerLift": 112,
       "bouquetDispersion": 0.557,
       "frontViewRatio": 0.22,
-      "showArrangementGuides": false
+      "showArrangementGuides": false,
+      "vaseScale": 0.4
     }
   },
   {
     "name": "Seed 20260209 / 3",
     "variables": {
-      "pixelScale": 2,
+      "pixelScale": 1,
       "maxPixels": 89411,
       "brightnessOffset": -51,
       "contrastFactor": 36,
@@ -53,13 +55,14 @@
       "bouquetInnerLift": 112,
       "bouquetDispersion": 0.507,
       "frontViewRatio": 0.22,
-      "showArrangementGuides": false
+      "showArrangementGuides": false,
+      "vaseScale": 0.4
     }
   },
   {
     "name": "Seed 20260209 / 4",
     "variables": {
-      "pixelScale": 2,
+      "pixelScale": 1,
       "maxPixels": 50247,
       "brightnessOffset": -63,
       "contrastFactor": 39,
@@ -72,13 +75,14 @@
       "bouquetInnerLift": 112,
       "bouquetDispersion": 0.663,
       "frontViewRatio": 0.22,
-      "showArrangementGuides": false
+      "showArrangementGuides": false,
+      "vaseScale": 0.4
     }
   },
   {
     "name": "Seed 20260209 / 5",
     "variables": {
-      "pixelScale": 2,
+      "pixelScale": 1,
       "maxPixels": 41319,
       "brightnessOffset": -66,
       "contrastFactor": 16,
@@ -91,13 +95,14 @@
       "bouquetInnerLift": 112,
       "bouquetDispersion": 0.672,
       "frontViewRatio": 0.22,
-      "showArrangementGuides": false
+      "showArrangementGuides": false,
+      "vaseScale": 0.4
     }
   },
   {
     "name": "Seed 20260209 / 6",
     "variables": {
-      "pixelScale": 2,
+      "pixelScale": 1,
       "maxPixels": 11126,
       "brightnessOffset": -59,
       "contrastFactor": 33,
@@ -110,13 +115,14 @@
       "bouquetInnerLift": 112,
       "bouquetDispersion": 0.561,
       "frontViewRatio": 0.22,
-      "showArrangementGuides": false
+      "showArrangementGuides": false,
+      "vaseScale": 0.4
     }
   },
   {
     "name": "Seed 20260209 / 7",
     "variables": {
-      "pixelScale": 2,
+      "pixelScale": 1,
       "maxPixels": 16857,
       "brightnessOffset": -68,
       "contrastFactor": 5,
@@ -129,13 +135,14 @@
       "bouquetInnerLift": 112,
       "bouquetDispersion": 0.696,
       "frontViewRatio": 0.22,
-      "showArrangementGuides": false
+      "showArrangementGuides": false,
+      "vaseScale": 0.4
     }
   },
   {
     "name": "Seed 20260209 / 8",
     "variables": {
-      "pixelScale": 2,
+      "pixelScale": 1,
       "maxPixels": 91695,
       "brightnessOffset": -65,
       "contrastFactor": 26,
@@ -148,7 +155,8 @@
       "bouquetInnerLift": 112,
       "bouquetDispersion": 0.913,
       "frontViewRatio": 0.22,
-      "showArrangementGuides": false
+      "showArrangementGuides": false,
+      "vaseScale": 0.4
     }
   }
 ]

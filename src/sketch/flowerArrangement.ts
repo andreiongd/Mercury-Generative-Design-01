@@ -229,7 +229,7 @@ export function generateFlowerArrangement(options: FlowerArrangementOptions): Fl
     outerGuide.radiusY * (0.3 + 0.9 * dispersion) * lerp(0.92, 0.56, countNorm),
   );
   const tangentJitterFactor = (0.26 + 0.75 * dispersion) * lerp(0.9, 0.64, countNorm);
-  const baseFlowerSize = lerp(66, 48, countNorm) * lerp(0.92, 1.14, bouquetScale);
+  const baseFlowerSize = lerp(50, 72, countNorm) * lerp(1.02, 1.28, bouquetScale);
   const sizeSpread = lerp(0.42, 0.62, dispersion);
   const sizeMin = Math.max(20, baseFlowerSize * (1 - sizeSpread * 0.45));
   const sizeMax = Math.max(sizeMin + 6, baseFlowerSize * (1 + sizeSpread * 1.45));
