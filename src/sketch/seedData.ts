@@ -37,6 +37,16 @@ export function createSeededPresets(
         drawAsRects: rand() > 0,
         shuffleEveryNFrames: Math.floor(randomRange(rand, 0, 60)),
         rngSeed: Math.floor(randomRange(rand, 1, 99999)),
+        arrangementOuterWidth: Math.floor(randomRange(rand, 220, 330)),
+        arrangementOuterHeight: Math.floor(randomRange(rand, 120, 210)),
+        arrangementInnerScale: randomRange(rand, 0.5, 0.74),
+        arrangementOuterCount: Math.floor(randomRange(rand, 20, 32)),
+        arrangementInnerCount: Math.floor(randomRange(rand, 10, 18)),
+        arrangementMinGap: Math.floor(randomRange(rand, 18, 30)),
+        arrangementJitterMin: Math.floor(randomRange(rand, 5, 10)),
+        arrangementJitterMax: Math.floor(randomRange(rand, 20, 38)),
+        arrangementVerticalJitter: Math.floor(randomRange(rand, 12, 28)),
+        flowerDrawSize: 48,
       };
     })(),
   }));

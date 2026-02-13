@@ -1,19 +1,18 @@
 import type p5 from "p5";
+import { generateFlowerArrangement } from "./flowerArrangement";
 
 type RGB = [number, number, number];
 type FlowerPlacement = {
   x: number;
   y: number;
+  depth: number;
+  rotation: number;
   size: number;
-  angle: number;
   spriteIndex: number;
-  collisionRadius: number;
 };
 
 type FlowerSprite = {
   image: p5.Image;
-  visibleScale: number;
-  radiusScale: number;
 };
 
 export type SketchVariables = {
@@ -24,6 +23,35 @@ export type SketchVariables = {
   maxPixels?: number;
   shuffleEveryNFrames?: number;
   rngSeed?: number;
+  flowerCount?: number;
+  bouquetScale?: number;
+  bouquetAspect?: number;
+  bouquetLift?: number;
+  bouquetInnerLift?: number;
+  bouquetDensity?: number;
+  bouquetDispersion?: number;
+  frontViewRatio?: number;
+  showArrangementGuides?: boolean;
+  // legacy fields (still supported as fallback)
+  bouquetWidth?: number;
+  bouquetHeight?: number;
+  arrangementOuterWidth?: number;
+  arrangementOuterHeight?: number;
+  arrangementOuterLift?: number;
+  arrangementInnerLift?: number;
+  arrangementFrontViewRatio?: number;
+  arrangementShowGuides?: boolean;
+  flowerDrawSize?: number;
+  flowerDrawSizeMin?: number;
+  flowerDrawSizeMax?: number;
+  arrangementOuterCount?: number;
+  arrangementInnerCount?: number;
+  arrangementMinGap?: number;
+  arrangementJitterMin?: number;
+  arrangementJitterMax?: number;
+  arrangementVerticalJitter?: number;
+  flowerSizeMin?: number;
+  flowerSizeMax?: number;
 };
 
 export type SketchOptions = {
@@ -47,6 +75,10 @@ function clamp255(value: number) {
   return Math.max(0, Math.min(255, value));
 }
 
+function clamp01(value: number) {
+  return Math.max(0, Math.min(1, value));
+}
+
 export function createSketch(opts: SketchOptions = {}) {
   const width = opts.width ?? 1080;
   const height = opts.height ?? 1350;
@@ -60,8 +92,31 @@ export function createSketch(opts: SketchOptions = {}) {
   const DRAW_AS_RECTS = vars.drawAsRects ?? true;
   const MAX_PIXELS = Math.max(0, Math.floor(vars.maxPixels ?? 50000));
   const RNG_SEED = Math.floor(vars.rngSeed ?? 1337);
-  const VASE_SCALE = 0.5;
-  const FLOWER_SIZE_SCALE = 5.0;
+  const VASE_SCALE = 0.45;
+  const fallbackFlowerCount =
+    (vars.arrangementOuterCount ?? 24) + (vars.arrangementInnerCount ?? 13);
+  const FLOWER_COUNT = Math.max(6, Math.floor(vars.flowerCount ?? fallbackFlowerCount));
+  const legacyWidth = vars.bouquetWidth ?? vars.arrangementOuterWidth;
+  const legacyHeight = vars.bouquetHeight ?? vars.arrangementOuterHeight;
+  const derivedScaleFromLegacy = clamp01(
+    typeof legacyWidth === "number" ? (legacyWidth - 260) / 240 : 0.56,
+  );
+  const legacyAspectRatio =
+    typeof legacyWidth === "number" && typeof legacyHeight === "number" && legacyWidth > 0
+      ? legacyHeight / legacyWidth
+      : 0.56;
+  const derivedAspectFromLegacy = clamp01((legacyAspectRatio - 0.32) / 0.5);
+  const BOUQUET_SCALE = clamp01(vars.bouquetScale ?? derivedScaleFromLegacy);
+  const BOUQUET_ASPECT = clamp01(vars.bouquetAspect ?? derivedAspectFromLegacy);
+  const BOUQUET_LIFT = Math.max(0, vars.bouquetLift ?? vars.arrangementOuterLift ?? 72);
+  const BOUQUET_INNER_LIFT = Math.max(0, vars.bouquetInnerLift ?? vars.arrangementInnerLift ?? 112);
+  const BOUQUET_DENSITY = vars.bouquetDensity;
+  const BOUQUET_DISPERSION = clamp01(vars.bouquetDispersion ?? 0.67);
+  const FRONT_VIEW_RATIO = Math.max(
+    0.12,
+    Math.min(0.75, vars.frontViewRatio ?? vars.arrangementFrontViewRatio ?? 0.22),
+  );
+  const SHOW_GUIDES = vars.showArrangementGuides ?? vars.arrangementShowGuides ?? false;
 
   return (p: p5) => {
     let raw: p5.Image | null = null;
@@ -74,6 +129,13 @@ export function createSketch(opts: SketchOptions = {}) {
     let fittedOffsetY = 0;
     let fittedW = 0;
     let fittedH = 0;
+    let arrangementCenterX = 0;
+    let arrangementCenterY = 0;
+    let arrangementInnerCenterY = 0;
+    let arrangementOuterRadiusX = 0;
+    let arrangementOuterRadiusY = 0;
+    let arrangementInnerRadiusX = 0;
+    let arrangementInnerRadiusY = 0;
     let flowerPlacements: FlowerPlacement[] = [];
     let flowerSprites: FlowerSprite[] = [];
 
@@ -144,65 +206,29 @@ export function createSketch(opts: SketchOptions = {}) {
       const centerY = fittedOffsetY + anchorY * fittedH;
 
       const rand = mulberry32((RNG_SEED ^ 0x9e3779b9) >>> 0);
-      const count = 12 + Math.floor(rand() * 50);
-      const radius = Math.max(6, Math.min(fittedW, fittedH) * 0.2);
-      const spriteCount = Math.max(1, flowerSprites.length);
-      const placed: FlowerPlacement[] = [];
+      const arrangement = generateFlowerArrangement({
+        centerX,
+        centerY,
+        flowerCount: FLOWER_COUNT,
+        bouquetScale: BOUQUET_SCALE,
+        bouquetAspect: BOUQUET_ASPECT,
+        bouquetLift: BOUQUET_LIFT,
+        innerLift: BOUQUET_INNER_LIFT,
+        frontViewRatio: FRONT_VIEW_RATIO,
+        ...(typeof BOUQUET_DENSITY === "number" ? { bouquetDensity: BOUQUET_DENSITY } : {}),
+        bouquetDispersion: BOUQUET_DISPERSION,
+        spriteCount: flowerSprites.length,
+        rand,
+      });
 
-      for (let i = 0; i < count; i += 1) {
-        const spriteIndex = Math.floor(rand() * spriteCount);
-        const sprite = flowerSprites[spriteIndex];
-        const spriteVisibleScale = sprite?.visibleScale ?? 0.55;
-        const spriteRadiusScale = sprite?.radiusScale ?? 0.5;
-
-        const size = 10 + rand() * 15;
-        const sizeAdjusted = size * (0.7 + spriteVisibleScale * 0.9) * FLOWER_SIZE_SCALE;
-        const collisionRadius = Math.max(1, sizeAdjusted * spriteRadiusScale * .2);
-        const rotation = (rand() - 0.5) * 0.7;
-        const localRadius = radius + sizeAdjusted * 0.9;
-
-        let accepted: FlowerPlacement | null = null;
-        for (let attempt = 0; attempt < 60; attempt += 1) {
-          const angle = rand() * Math.PI * 2;
-          const spread = (0.15 + rand() * 0.95) * localRadius;
-          const x = centerX + Math.cos(angle) * spread * 0.95 + (rand() - 0.5) * radius * 0.22;
-          const y = centerY + Math.sin(angle) * spread * 0.58 - radius * 0.3 + (rand() - 0.5) * radius * 0.18;
-
-          let overlaps = false;
-          for (let j = 0; j < placed.length; j += 1) {
-            const other = placed[j];
-            const dx = x - other.x;
-            const dy = y - other.y;
-            const minDist = (collisionRadius + other.collisionRadius) * 1.24 + 1.5;
-            if (dx * dx + dy * dy < minDist * minDist) {
-              overlaps = true;
-              break;
-            }
-          }
-
-          if (!overlaps) {
-            accepted = { x, y, size: sizeAdjusted, angle: rotation, spriteIndex, collisionRadius };
-            break;
-          }
-        }
-
-        if (!accepted) {
-          const fallbackAngle = rand() * Math.PI * 2;
-          const fallbackSpread = (0.3 + rand() * 0.8) * localRadius;
-          accepted = {
-            x: centerX + Math.cos(fallbackAngle) * fallbackSpread,
-            y: centerY + Math.sin(fallbackAngle) * fallbackSpread * 0.55 - radius * 0.25,
-            size: sizeAdjusted,
-            angle: rotation,
-            spriteIndex,
-            collisionRadius,
-          };
-        }
-
-        placed.push(accepted);
-      }
-
-      flowerPlacements = placed;
+      flowerPlacements = arrangement.points;
+      arrangementCenterX = arrangement.guides.outer.centerX;
+      arrangementCenterY = arrangement.guides.outer.centerY;
+      arrangementOuterRadiusX = arrangement.guides.outer.radiusX;
+      arrangementOuterRadiusY = arrangement.guides.outer.radiusY;
+      arrangementInnerCenterY = arrangement.guides.inner.centerY;
+      arrangementInnerRadiusX = arrangement.guides.inner.radiusX;
+      arrangementInnerRadiusY = arrangement.guides.inner.radiusY;
     };
 
     const fitImageToSize = (src: p5.Image, outW: number, outH: number) => {
@@ -331,43 +357,7 @@ export function createSketch(opts: SketchOptions = {}) {
       const dx = Math.floor((targetSize - newW) / 2);
       const dy = Math.floor((targetSize - newH) / 2);
       out.copy(scaled, 0, 0, newW, newH, dx, dy, newW, newH);
-      out.loadPixels();
-
-      let minX = targetSize;
-      let minY = targetSize;
-      let maxX = -1;
-      let maxY = -1;
-      let alphaCount = 0;
-
-      for (let y = 0; y < targetSize; y += 1) {
-        for (let x = 0; x < targetSize; x += 1) {
-          const idx = 4 * (x + y * targetSize);
-          const alpha = out.pixels[idx + 3];
-          if (alpha <= 6) continue;
-          alphaCount += 1;
-          if (x < minX) minX = x;
-          if (x > maxX) maxX = x;
-          if (y < minY) minY = y;
-          if (y > maxY) maxY = y;
-        }
-      }
-
-      if (maxX < minX || maxY < minY || alphaCount === 0) {
-        return { image: out, visibleScale: 0.55, radiusScale: 0.45 };
-      }
-
-      const boxW = maxX - minX + 1;
-      const boxH = maxY - minY + 1;
-      const boxAreaScale = Math.sqrt((boxW * boxH) / (targetSize * targetSize));
-      const alphaAreaScale = Math.sqrt(alphaCount / (targetSize * targetSize));
-      const visibleScale = Math.max(0.35, Math.min(1.15, alphaAreaScale * 1.35));
-      const radiusScale = Math.max(0.3, Math.min(0.7, (Math.max(boxW, boxH) / targetSize) * 0.5));
-
-      return {
-        image: out,
-        visibleScale: Math.max(visibleScale, boxAreaScale * 0.75),
-        radiusScale,
-      };
+      return { image: out };
     };
 
     const loadFlowerSprites = () => {
@@ -428,6 +418,27 @@ export function createSketch(opts: SketchOptions = {}) {
       composite.imageMode(p.CORNER);
       composite.image(fitHigh.image, 0, 0);
 
+      if (SHOW_GUIDES) {
+        composite.push();
+        composite.noFill();
+        composite.strokeWeight(2);
+        composite.stroke(255, 40, 40, 210);
+        composite.ellipse(
+          arrangementCenterX,
+          arrangementCenterY,
+          arrangementOuterRadiusX * 2,
+          arrangementOuterRadiusY * 2,
+        );
+        composite.stroke(60, 180, 255, 210);
+        composite.ellipse(
+          arrangementCenterX,
+          arrangementInnerCenterY,
+          arrangementInnerRadiusX * 2,
+          arrangementInnerRadiusY * 2,
+        );
+        composite.pop();
+      }
+
       for (let i = 0; i < flowerPlacements.length; i += 1) {
         const flower = flowerPlacements[i];
         if (flowerSprites.length === 0) continue;
@@ -439,7 +450,7 @@ export function createSketch(opts: SketchOptions = {}) {
         composite.push();
         composite.imageMode(p.CENTER);
         composite.translate(x, y);
-        composite.rotate(flower.angle);
+        composite.rotate(flower.rotation);
         composite.image(sprite.image, 0, 0, size, size);
         composite.pop();
       }

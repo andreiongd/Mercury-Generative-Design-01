@@ -1,15 +1,13 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import p5 from "p5";
-import { createSketch, type SketchOptions } from "../sketch/createSketch";
-import { createSeededPresets } from "../sketch/seedData";
+import { createSketch, type SketchOptions, type SketchVariables } from "../sketch/createSketch";
 
 const CANVAS_WIDTH = 1080;
 const CANVAS_HEIGHT = 1080;
 
 type SeededSketchPageProps = {
   title: string;
-  seed: number;
-  presetCount: number;
+  presetVariables: SketchVariables[];
   vaseImages: string[];
   savePrefix: string;
   navLabel: string;
@@ -18,8 +16,7 @@ type SeededSketchPageProps = {
 
 export function SeededSketchPage({
   title,
-  seed,
-  presetCount,
+  presetVariables,
   vaseImages,
   savePrefix,
   navLabel,
@@ -28,20 +25,26 @@ export function SeededSketchPage({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const sketchRef = useRef<p5 | null>(null);
   const [index, setIndex] = useState(0);
+  const presetCount = presetsLength(presetVariables.length);
+
+  const advancePreset = useCallback(() => {
+    setIndex((current) => (current + 1) % presetCount);
+  }, [presetCount]);
 
   const presets = useMemo<SketchOptions[]>(
     () =>
-      createSeededPresets(seed, presetCount).map((preset, i) => ({
+      presetVariables.map((variables, i) => ({
         width: CANVAS_WIDTH,
         height: CANVAS_HEIGHT,
         imagePath: vaseImages[i % vaseImages.length],
-        variables: preset.variables,
+        variables,
       })),
-    [presetCount, seed, vaseImages],
+    [presetVariables, vaseImages],
   );
 
   useEffect(() => {
     if (!containerRef.current) return;
+    if (presets.length === 0) return;
 
     const sketch = createSketch(presets[index]);
     const instance = new p5(sketch, containerRef.current);
@@ -68,7 +71,7 @@ export function SeededSketchPage({
   };
 
   return (
-    <main className="app" onClick={() => setIndex((current) => (current + 1) % presets.length)}>
+    <main className="app" onClickCapture={advancePreset}>
       <h1>{title}</h1>
       <p>Click anywhere to rotate presets.</p>
       <p className="preset">Preset {index + 1} / {presets.length}</p>
@@ -83,4 +86,8 @@ export function SeededSketchPage({
       </div>
     </main>
   );
+}
+
+function presetsLength(length: number) {
+  return Math.max(1, length);
 }
