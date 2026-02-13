@@ -6,7 +6,7 @@ import {
   type DirectionTwoVariables,
 } from "../sketch/createDirectionTwoSketch";
 
-const CANVAS_WIDTH = 1080;
+const CANVAS_WIDTH = 1350;
 const CANVAS_HEIGHT = 1080;
 
 type DirectionTwoPageProps = {
@@ -14,16 +14,18 @@ type DirectionTwoPageProps = {
 };
 
 const SECONDARY_VASE_IMAGES = [
-  "/sketch-images/vases/vase01.png",
-  "/sketch-images/vases/vase02.png",
-  "/sketch-images/vases/vase03.png",
   "/sketch-images/vases/vase04.png",
   "/sketch-images/vases/vase05.png",
   "/sketch-images/vases/vase06.png",
+  "/sketch-images/vases/vase08.png",
 ];
 
 const SECONDARY_TOP_IMAGES = [
-  "/sketch-images/bouquet/stillife06.png"
+  "/sketch-images/bouquet/stillife06.png",
+  "/sketch-images/bouquet/stilllife07.png"
+];
+const SECONDARY_SIDE_IMAGES = [
+  "/sketch-images/mercury%20logo/mercurylogo04.png",
 ];
 
 function mulberry32(seed: number) {
@@ -48,22 +50,27 @@ export function DirectionTwoPage({ onNavigate }: DirectionTwoPageProps) {
   const presets = useMemo<DirectionTwoSketchOptions[]>(() => {
     const rand = mulberry32(20260210);
     const pairs = SECONDARY_VASE_IMAGES.flatMap((vasePath) =>
-      SECONDARY_TOP_IMAGES.map((topPath) => ({ vasePath, topPath })),
+      SECONDARY_TOP_IMAGES.flatMap((topPath) =>
+        SECONDARY_SIDE_IMAGES.map((sidePath) => ({ vasePath, topPath, sidePath })),
+      ),
     );
 
-    return pairs.map(({ vasePath, topPath }) => {
+    return pairs.map(({ vasePath, topPath, sidePath }) => {
       const vars: DirectionTwoVariables = {
-        pixelScale: Math.floor(randomRange(rand, 2,2)),
-        brightnessOffset: Math.floor(randomRange(rand, -28, -10)),
+        pixelScale: 2,
+        brightnessOffset: Math.floor(randomRange(rand, -28, 0)),
         contrastFactor: Math.floor(randomRange(rand, 8, 32)),
-        stillLifeOffset: Math.floor(randomRange(rand, 70, 130)),
-        stackYOffset: Math.floor(randomRange(rand, 50, 95)),
+        stillLifeOffset: Math.floor(randomRange(rand, 180, 180)),
+        stackYOffset: Math.floor(randomRange(rand, 220, 220)),
         drawAsRects: true,
-        maxPixels: Math.floor(randomRange(rand, 1000, 20000)),
+        maxPixels: Math.floor(randomRange(rand, 10000, 50000)),
         shuffleEveryNFrames: 0,
         rngSeed: Math.floor(randomRange(rand, 1, 99999)),
-        vaseScale: randomRange(rand, 0.4, 0.72),
-        stilllifeScale: randomRange(rand, 0.5, 0.95),
+        vaseScale: randomRange(rand, 0.6, 0.6),
+        stilllifeScale: randomRange(rand, 0.7, 0.7),
+        sideScale: randomRange(rand, 0.52, 0.52),
+        sideGapPx: Math.floor(randomRange(rand, -150, -150)),
+        sideYOffsetPx: Math.floor(randomRange(rand, 0, 0)),
       };
 
       return {
@@ -71,6 +78,7 @@ export function DirectionTwoPage({ onNavigate }: DirectionTwoPageProps) {
         height: CANVAS_HEIGHT,
         bottomImagePath: vasePath,
         topImagePath: topPath,
+        sideImagePath: sidePath,
         variables: vars,
       };
     });

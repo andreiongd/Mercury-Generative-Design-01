@@ -8,6 +8,7 @@ type Bounds = {
   maxX: number;
   maxY: number;
   centerX: number;
+  centerY: number;
 };
 
 export type DirectionTwoVariables = {
@@ -22,6 +23,9 @@ export type DirectionTwoVariables = {
   rngSeed?: number;
   vaseScale?: number;
   stilllifeScale?: number;
+  sideScale?: number;
+  sideGapPx?: number;
+  sideYOffsetPx?: number;
   minCoverage?: number;
 };
 
@@ -30,6 +34,7 @@ export type DirectionTwoSketchOptions = {
   height?: number;
   bottomImagePath: string;
   topImagePath: string;
+  sideImagePath?: string;
   variables?: DirectionTwoVariables;
 };
 
@@ -58,30 +63,37 @@ export function createDirectionTwoSketch(opts: DirectionTwoSketchOptions) {
   // Keep offsets in canvas pixels so composition position is stable across pixelScale changes.
   const STILLLIFE_OFFSET_PX = vars.stillLifeOffset ?? 100;
   const STACK_Y_OFFSET_PX = vars.stackYOffset ?? 80;
-  const DRAW_AS_RECTS = vars.drawAsRects ?? true;
+  const DRAW_AS_RECTS = vars.drawAsRects ?? false;
   const MAX_PIXELS = Math.max(0, Math.floor(vars.maxPixels ?? 50000));
-  const MIN_COVERAGE = Math.max(0, Math.min(1, vars.minCoverage ?? 0.75));
+  const MIN_COVERAGE = Math.max(0, Math.min(1, vars.minCoverage ?? 0.33));
   const SHUFFLE_EVERY_N_FRAMES = Math.max(0, Math.floor(vars.shuffleEveryNFrames ?? 0));
   const RNG_SEED = Math.floor(vars.rngSeed ?? 1337);
   const VASE_SCALE = vars.vaseScale ?? 0.5;
   const STILLLIFE_SCALE = vars.stilllifeScale ?? 0.75;
+  const SIDE_SCALE = vars.sideScale ?? 0.52;
+  const SIDE_GAP_PX = vars.sideGapPx ?? 34;
+  const SIDE_Y_OFFSET_PX = vars.sideYOffsetPx ?? 0;
 
   const palette: RGB[] = [
     [0, 0, 0],
     [0, 0, 0],
     [66, 133, 244],
+    [255, 50, 0],
     [234, 67, 53],
-    [251, 188, 5],
-    [52, 168, 83],
+    [180, 288, 5],
+    [52, 200, 3],
     [248, 249, 250],
+
   ];
   const darkestColor = palette[0];
 
   return (p: p5) => {
     let rawTop: p5.Image | null = null;
     let rawBottom: p5.Image | null = null;
+    let rawSide: p5.Image | null = null;
     let imgTop: p5.Image | null = null;
     let imgBottom: p5.Image | null = null;
+    let imgSide: p5.Image | null = null;
     let pg: p5.Graphics;
 
     let finalW = 0;
@@ -90,11 +102,16 @@ export function createDirectionTwoSketch(opts: DirectionTwoSketchOptions) {
     let drawCountBottom = 0;
     let drawIdxTop = new Int32Array(0);
     let drawCountTop = 0;
+    let drawIdxSide = new Int32Array(0);
+    let drawCountSide = 0;
 
-    let vaseBounds: Bounds = { minX: 0, minY: 0, maxX: 0, maxY: 0, centerX: 0 };
-    let topBounds: Bounds = { minX: 0, minY: 0, maxX: 0, maxY: 0, centerX: 0 };
+    let vaseBounds: Bounds = { minX: 0, minY: 0, maxX: 0, maxY: 0, centerX: 0, centerY: 0 };
+    let topBounds: Bounds = { minX: 0, minY: 0, maxX: 0, maxY: 0, centerX: 0, centerY: 0 };
+    let sideBounds: Bounds = { minX: 0, minY: 0, maxX: 0, maxY: 0, centerX: 0, centerY: 0 };
     let topOffsetX = 0;
     let topOffsetY = 0;
+    let sideOffsetX = 0;
+    let sideOffsetY = 0;
     let isReady = false;
 
     const isDarkest = (r: number, g: number, b: number) =>
@@ -116,6 +133,16 @@ export function createDirectionTwoSketch(opts: DirectionTwoSketchOptions) {
           pick = palette[i];
         }
       }
+      if (pick[0] === 234 && pick[1] === 67 && pick[2] === 53) {
+        return [208, 50, 117];
+      }
+      if (pick[0] === 66 && pick[1] === 133 && pick[2] === 244) {
+        return [82, 102, 235];
+      }
+      if (pick[0] === 248 && pick[1] === 249 && pick[2] === 250) {
+        return [255, 255, 255];
+      }
+   
       return pick;
     };
 
@@ -272,6 +299,7 @@ export function createDirectionTwoSketch(opts: DirectionTwoSketchOptions) {
         maxX,
         maxY,
         centerX: Math.floor((minX + maxX) / 2),
+        centerY: Math.floor((minY + maxY) / 2),
       };
     };
 
@@ -311,6 +339,24 @@ export function createDirectionTwoSketch(opts: DirectionTwoSketchOptions) {
       drawCountBottom = drawIdxBottom.length;
     };
 
+    const buildSideCache = () => {
+      if (!imgSide) {
+        drawIdxSide = new Int32Array(0);
+        drawCountSide = 0;
+        return;
+      }
+      imgSide.loadPixels();
+      const indices: number[] = [];
+      for (let px = 0; px < imgSide.pixels.length; px += 4) {
+        const r = imgSide.pixels[px];
+        const g = imgSide.pixels[px + 1];
+        const b = imgSide.pixels[px + 2];
+        if (!isDarkest(r, g, b)) indices.push(px / 4);
+      }
+      drawIdxSide = Int32Array.from(indices);
+      drawCountSide = drawIdxSide.length;
+    };
+
     const shuffleDrawIdxBottom = (frameCount: number) => {
       if (drawIdxBottom.length === 0) return;
       const rand = mulberry32((RNG_SEED ^ 0x9e3779b9 ^ frameCount * 8191) >>> 0);
@@ -333,6 +379,17 @@ export function createDirectionTwoSketch(opts: DirectionTwoSketchOptions) {
       }
     };
 
+    const shuffleDrawIdxSide = (frameCount: number) => {
+      if (drawIdxSide.length === 0) return;
+      const rand = mulberry32((RNG_SEED ^ 0x517cc1b7 ^ frameCount * 12289) >>> 0);
+      for (let i = drawIdxSide.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(rand() * (i + 1));
+        const tmp = drawIdxSide[i];
+        drawIdxSide[i] = drawIdxSide[j];
+        drawIdxSide[j] = tmp;
+      }
+    };
+
     const rebuildImagesAndCaches = () => {
       if (!rawTop || !rawBottom) return;
 
@@ -349,17 +406,42 @@ export function createDirectionTwoSketch(opts: DirectionTwoSketchOptions) {
       adjustContrast(imgTop, CONTRAST_FACTOR);
       applyDither(imgTop);
 
+      if (rawSide) {
+        imgSide = prepareImageWithAspectScaled(rawSide, SIDE_SCALE);
+        adjustBrightness(imgSide, BRIGHTNESS_OFFSET);
+        adjustContrast(imgSide, CONTRAST_FACTOR);
+        applyDither(imgSide);
+      } else {
+        imgSide = null;
+      }
+
       buildBottomCache();
       buildTopCache();
+      buildSideCache();
       vaseBounds = computeBBox(imgBottom);
       topBounds = computeBBox(imgTop);
+      if (imgSide) {
+        sideBounds = computeBBox(imgSide);
+      } else {
+        sideBounds = { minX: 0, minY: 0, maxX: 0, maxY: 0, centerX: 0, centerY: 0 };
+      }
 
       topOffsetX = vaseBounds.centerX - topBounds.centerX;
       topOffsetY = vaseBounds.minY - topBounds.maxY + STILLLIFE_OFFSET_PX / pixelScale;
+      if (imgSide) {
+        const stilllifeMaxX = topBounds.maxX + topOffsetX;
+        const groupMaxX = Math.max(vaseBounds.maxX, stilllifeMaxX);
+        sideOffsetX = groupMaxX + SIDE_GAP_PX / pixelScale - sideBounds.minX;
+        sideOffsetY = vaseBounds.centerY - sideBounds.centerY + SIDE_Y_OFFSET_PX / pixelScale;
+      } else {
+        sideOffsetX = 0;
+        sideOffsetY = 0;
+      }
 
       // Shuffle once for a seeded randomized composition, then keep static unless explicitly animated.
       shuffleDrawIdxBottom(0);
       shuffleDrawIdxTop(0);
+      shuffleDrawIdxSide(0);
       isReady = true;
     };
 
@@ -379,6 +461,7 @@ export function createDirectionTwoSketch(opts: DirectionTwoSketchOptions) {
         const drawY = y * pixelScale;
 
         pg.fill(r, g, b);
+
         if (DRAW_AS_RECTS) {
           pg.rect(drawX, drawY, pixelScale, pixelScale);
         } else {
@@ -412,6 +495,31 @@ export function createDirectionTwoSketch(opts: DirectionTwoSketchOptions) {
       }
     };
 
+    const drawSideWithCapAndOffset = (toDraw: number) => {
+      if (!imgSide) return;
+      imgSide.loadPixels();
+
+      for (let k = 0; k < toDraw; k += 1) {
+        const i = drawIdxSide[k];
+        const pxIdx = i * 4;
+        const r = imgSide.pixels[pxIdx];
+        const g = imgSide.pixels[pxIdx + 1];
+        const b = imgSide.pixels[pxIdx + 2];
+
+        const x = (i % finalW) + sideOffsetX;
+        const y = Math.floor(i / finalW) + sideOffsetY;
+        const drawX = x * pixelScale;
+        const drawY = y * pixelScale;
+
+        pg.fill(r, g, b);
+        if (DRAW_AS_RECTS) {
+          pg.rect(drawX, drawY, pixelScale, pixelScale);
+        } else {
+          pg.ellipse(drawX + pixelScale * 0.5, drawY + pixelScale * 0.5, pixelScale, pixelScale);
+        }
+      }
+    };
+
     p.setup = () => {
       p.createCanvas(width, height);
       p.pixelDensity(1);
@@ -423,7 +531,7 @@ export function createDirectionTwoSketch(opts: DirectionTwoSketchOptions) {
       pg.pixelDensity(1);
       pg.noSmooth();
 
-      let remaining = 2;
+      let remaining = opts.sideImagePath ? 3 : 2;
       const done = () => {
         remaining -= 1;
         if (remaining > 0) return;
@@ -453,20 +561,35 @@ export function createDirectionTwoSketch(opts: DirectionTwoSketchOptions) {
           done();
         },
       );
+
+      if (opts.sideImagePath) {
+        p.loadImage(
+          opts.sideImagePath,
+          (loaded) => {
+            rawSide = loaded;
+            done();
+          },
+          () => {
+            rawSide = null;
+            done();
+          },
+        );
+      }
     };
 
     p.draw = () => {
       if (!isReady) {
-        p.background(0);
+        p.background("#171721");
         return;
       }
 
       if (SHUFFLE_EVERY_N_FRAMES > 0 && p.frameCount % SHUFFLE_EVERY_N_FRAMES === 0) {
         shuffleDrawIdxBottom(p.frameCount);
         shuffleDrawIdxTop(p.frameCount);
+        shuffleDrawIdxSide(p.frameCount);
       }
 
-      pg.background(0);
+      pg.background("#171721");
       pg.noStroke();
       pg.push();
       pg.translate(
@@ -474,27 +597,36 @@ export function createDirectionTwoSketch(opts: DirectionTwoSketchOptions) {
         (pg.height - finalH * pixelScale) * 0.5 + STACK_Y_OFFSET_PX,
       );
 
-      const totalDrawable = drawCountBottom + drawCountTop;
+      const totalDrawable = drawCountBottom + drawCountTop + drawCountSide;
       const minBudget = Math.floor(totalDrawable * MIN_COVERAGE);
       const totalBudget = Math.min(totalDrawable, Math.max(MAX_PIXELS, minBudget));
 
       let bottomBudget = 0;
       let topBudget = 0;
+      let sideBudget = 0;
       if (totalDrawable > 0 && totalBudget > 0) {
         const bottomShare = drawCountBottom / totalDrawable;
+        const topShare = drawCountTop / totalDrawable;
+        const sideShare = drawCountSide / totalDrawable;
         bottomBudget = Math.min(drawCountBottom, Math.floor(totalBudget * bottomShare));
-        topBudget = Math.min(drawCountTop, totalBudget - bottomBudget);
+        topBudget = Math.min(drawCountTop, Math.floor(totalBudget * topShare));
+        sideBudget = Math.min(drawCountSide, Math.floor(totalBudget * sideShare));
 
-        const remaining = totalBudget - (bottomBudget + topBudget);
+        const remaining = totalBudget - (bottomBudget + topBudget + sideBudget);
         if (remaining > 0) {
-          const addBottom = Math.min(remaining, drawCountBottom - bottomBudget);
+          const addBottom = Math.min(remaining, Math.max(0, drawCountBottom - bottomBudget));
           bottomBudget += addBottom;
-          topBudget += Math.min(remaining - addBottom, drawCountTop - topBudget);
+          let remain2 = remaining - addBottom;
+          const addTop = Math.min(remain2, Math.max(0, drawCountTop - topBudget));
+          topBudget += addTop;
+          remain2 -= addTop;
+          sideBudget += Math.min(remain2, Math.max(0, drawCountSide - sideBudget));
         }
       }
 
       drawBottomWithCap(bottomBudget);
       drawTopWithCapAndOffset(topBudget);
+      drawSideWithCapAndOffset(sideBudget);
 
       pg.pop();
       p.image(pg, 0, 0);
