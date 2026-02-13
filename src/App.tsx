@@ -1,62 +1,68 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import p5 from "p5";
 import "./App.css";
-import { createSketch, type SketchOptions } from "./sketch/createSketch";
-import { createSeededPresets } from "./sketch/seedData";
+import { useEffect, useState } from "react";
+import { SeededSketchPage } from "./components/SeededSketchPage";
 
-const CANVAS_WIDTH = 1080;
-const CANVAS_HEIGHT = 1080;
-const VASE_IMAGES = ["/vases/vase06.png","/vases/vase04.png","/vases/vase05.png"];
+type PageRoute = "main" | "secondary";
+
+const MAIN_ROUTE = "#/";
+const SECOND_ROUTE = "#/secondary";
+const MAIN_VASE_IMAGES = [
+  "/sketch-images/vases/vase06.png",
+  "/sketch-images/vases/vase04.png",
+  "/sketch-images/vases/vase05.png",
+];
+const SECONDARY_VASE_IMAGES = [
+  "/sketch-images/vases/vase01.png",
+  "/sketch-images/vases/vase02.png",
+  "/sketch-images/vases/vase03.png",
+];
+
+function resolveRoute(hash: string): PageRoute {
+  return hash === SECOND_ROUTE ? "secondary" : "main";
+}
 
 function App() {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const sketchRef = useRef<p5 | null>(null);
-
-  const presets = useMemo<SketchOptions[]>(
-    () =>
-      createSeededPresets(20260209, 8).map((preset, i) => ({
-        width: CANVAS_WIDTH,
-        height: CANVAS_HEIGHT,
-        imagePath: VASE_IMAGES[i % VASE_IMAGES.length],
-        variables: preset.variables,
-      })),
-    [],
-  );
-
-  const [index, setIndex] = useState(0);
+  const [route, setRoute] = useState<PageRoute>(() => resolveRoute(window.location.hash));
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!window.location.hash) {
+      window.location.hash = MAIN_ROUTE;
+    }
 
-    const sketch = createSketch(presets[index]);
-    const instance = new p5(sketch, containerRef.current);
-    sketchRef.current = instance;
-
-    return () => {
-      instance.remove();
-      if (sketchRef.current === instance) {
-        sketchRef.current = null;
-      }
+    const onHashChange = () => {
+      setRoute(resolveRoute(window.location.hash));
     };
-  }, [index, presets]);
 
-  const saveCurrentImage = (event: MouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation();
-    const instance = sketchRef.current;
-    if (!instance) return;
-    instance.saveCanvas(`dithered-preset-${index + 1}`, "png");
-  };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
 
   return (
-    <main className="app" onClick={() => setIndex((current) => (current + 1) % presets.length)}>
-      <h1>Mercury Generative Art</h1>
-      <p>Click anywhere to rotate presets.</p>
-      <p className="preset">Preset {index + 1} / {presets.length}</p>
-      <div className="canvasWrap" ref={containerRef} />
-      <button className="saveBtn" onClick={saveCurrentImage}>
-        Save PNG
-      </button>
-    </main>
+    route === "main" ? (
+      <SeededSketchPage
+        title="Mercury Generative Art"
+        seed={20260209}
+        presetCount={8}
+        vaseImages={MAIN_VASE_IMAGES}
+        savePrefix="main-dithered-preset"
+        navLabel="Open Second Page"
+        onNavigate={() => {
+          window.location.hash = SECOND_ROUTE;
+        }}
+      />
+    ) : (
+      <SeededSketchPage
+        title="Mercury Generative Art - Page 2"
+        seed={20260210}
+        presetCount={8}
+        vaseImages={SECONDARY_VASE_IMAGES}
+        savePrefix="secondary-dithered-preset"
+        navLabel="Back to Main Page"
+        onNavigate={() => {
+          window.location.hash = MAIN_ROUTE;
+        }}
+      />
+    )
   );
 }
 

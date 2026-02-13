@@ -46,9 +46,6 @@
 }
 
 .saveBtn {
-  position: fixed;
-  right: 1.25rem;
-  bottom: 1.25rem;
   border: 1px solid rgba(255, 255, 255, 0.28);
   background: rgba(10, 14, 20, 0.8);
   color: #f0f6ff;
@@ -62,5 +59,30 @@
 }
 
 .saveBtn:hover {
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.actions {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.navBtn {
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(10, 14, 20, 0.8);
+  color: #f0f6ff;
+  padding: 0.65rem 0.95rem;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 20;
+  backdrop-filter: blur(6px);
+}
+
+.navBtn:hover {
   border-color: rgba(255, 255, 255, 0.45);
 }

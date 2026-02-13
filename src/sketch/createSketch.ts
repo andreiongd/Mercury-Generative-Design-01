@@ -50,7 +50,7 @@ function clamp255(value: number) {
 export function createSketch(opts: SketchOptions = {}) {
   const width = opts.width ?? 1080;
   const height = opts.height ?? 1350;
-  const imagePath = opts.imagePath ?? "vase01.png";
+  const imagePath = opts.imagePath ?? "/sketch-images/vases/vase01.png";
 
   const vars = opts.variables ?? {};
 
@@ -372,13 +372,13 @@ export function createSketch(opts: SketchOptions = {}) {
 
     const loadFlowerSprites = () => {
       const paths = [
-        "/flowers/flower01.png",
-        "/flowers/flower02.png",
-        "/flowers/flower03.png",
-        "/flowers/flower04.png",
-        "/flowers/flower05.png",
-        "/flowers/flower06.png",
-        "/flowers/flower07.png",
+        "/sketch-images/flowers/flower01.png",
+        "/sketch-images/flowers/flower02.png",
+        "/sketch-images/flowers/flower03.png",
+        "/sketch-images/flowers/flower04.png",
+        "/sketch-images/flowers/flower05.png",
+        "/sketch-images/flowers/flower06.png",
+        "/sketch-images/flowers/flower07.png",
       ];
 
       const loaded = new Array<FlowerSprite | null>(paths.length).fill(null);
